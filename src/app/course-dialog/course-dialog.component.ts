@@ -39,14 +39,37 @@ export class CourseDialogComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
 
+      this.form.valueChanges // retorna um Observable
+        .pipe(
+          filter(() => this.form.valid), // filtra o Observable de form.valueChanges, quando form.valid
+          concatMap(changes => this.saveCourse(changes)), // executa o proximo Observable (saveCourse) sequencialmente
+          // mergeMap(changes => this.saveCourse(changes)), // executa o proximo Observable (saveCourse) em paralelo
+          // exhaustMap(changes => this.saveCourse(changes)) // executa o proximo Observable somente quando o anterior finalizar a execução
+        )
+        .subscribe();
 
+    }
 
+    saveCourse(changes) {
+      // método fetch retorn uma Promise. Utilizando a funcao fromPromise para retornar um Observable
+      return fromPromise(fetch(`/api/courses/${this.course.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(changes),
+        headers: {
+          'content-type': 'application/json'
+        }
+      }));
     }
 
 
 
     ngAfterViewInit() {
 
+      fromEvent(this.saveButton.nativeElement, 'click')
+        .pipe(
+          exhaustMap(() => this.saveCourse(this.form.value))
+        )
+        .subscribe();
 
     }
 
