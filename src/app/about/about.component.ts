@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { noop, of, Observable, OperatorFunction, interval } from '../../../node_modules/rxjs';
+import { noop, of, Observable, OperatorFunction, interval, Subject, BehaviorSubject, AsyncSubject, ReplaySubject } from '../../../node_modules/rxjs';
 import { createHttpObservable } from '../common/util';
 import { map } from '../../../node_modules/rxjs/operators';
 import { concat, merge } from '../../../node_modules/rxjs';
@@ -42,14 +42,96 @@ export class AboutComponent implements OnInit {
 
     // setTimeout(() => sub.unsubscribe(), 5000);
 
-    const http$ = createHttpObservable('/api/courses');
-    const sub = http$.subscribe(console.log);
+    // const http$ = createHttpObservable('/api/courses');
+    // const sub = http$.subscribe(console.log);
 
-    setTimeout(() => sub.unsubscribe(), 0);
+    // setTimeout(() => sub.unsubscribe(), 0);
 
 
+    // Subjects
+
+    // this.BehaviorSubjectSipleSample();
+    // this.AsyncSubjectSimpleSample();
+    this.ReplaySubjectSimpleSample();
 
 
   }
+
+  BehaviorSubjectSipleSample() {
+    // const subject = new Subject();
+    const subject = new BehaviorSubject(0); // Recebe o último valor emitido anteriormente, no caso do plain Subject,
+    // o observer nao recebe o valor se o subscribe for realizado após next() ter sido chamado
+
+    const series$ = subject.asObservable();
+
+    series$
+    .subscribe(val => console.log('early sub: ', val));
+
+    subject.next(1);
+    subject.next(2);
+    subject.next(3);
+
+    // subject.complete(); // chamando o complete() aqui,  os 'later subscribers' nao receberao mais notificações
+
+    setTimeout(() => {
+      series$
+      .subscribe(val => console.log('late sub: ', val));
+      subject.next(4);
+    }, 3000);
+  }
+
+  AsyncSubjectSimpleSample() {
+
+    const subject = new AsyncSubject();
+
+    const series$ = subject.asObservable();
+
+    series$
+      .subscribe(val => console.log('early sub: ', val));
+
+    let num = 0;
+    subject.next(num = num + 1);
+    subject.next(num = num - 1);
+    subject.next(num = num + 2);
+
+    subject.complete(); // So emite o ultimo valor setado com next(), usado para emitir o resultado obtido através de
+    // multiplas chamadas de next()
+
+    setTimeout(() => {
+      series$
+        .subscribe(val => console.log('late sub: ', val));
+
+      subject.next(4);
+    }, 3000);
+  }
+
+  ReplaySubjectSimpleSample() {
+
+    const subject = new ReplaySubject();
+
+    const series$ = subject.asObservable();
+
+    series$
+      .subscribe(val => console.log('early sub: ', val));
+
+    subject.next(1);
+    subject.next(2);
+    subject.next(3);
+
+    // subject.complete(); // Retransmite os valores para outros Observables mesmo após chamar complete()
+
+    setTimeout(() => {
+      series$
+        .subscribe(val => console.log('late sub: ', val));
+
+    }, 3000);
+
+    setTimeout(() => {
+      series$
+        .subscribe(val => console.log('more late sub ', val));
+
+    }, 5000);
+  }
+
 }
 
