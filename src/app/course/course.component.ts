@@ -11,12 +11,13 @@ import {
     concatMap,
     switchMap,
     withLatestFrom,
-    concatAll, shareReplay, throttleTime
+    concatAll, shareReplay, throttleTime, first
 } from 'rxjs/operators';
-import {merge, fromEvent, Observable, concat} from 'rxjs';
+import {merge, fromEvent, Observable, concat, forkJoin} from 'rxjs';
 import {Lesson} from '../model/lesson';
 import { createHttpObservable } from '../common/util';
 import { debug, RxJsLoggingLevel, setRxJsLoggingLevel } from '../common/debug';
+import { Store } from '../common/store.service';
 
 
 @Component({
@@ -28,25 +29,38 @@ export class CourseComponent implements OnInit, AfterViewInit {
 
     course$: Observable<Course>;
     lessons$: Observable<Lesson[]>;
-    courseId: string;
+    courseId: number;
 
     @ViewChild('searchInput') input: ElementRef;
 
-    constructor(private route: ActivatedRoute) {
+    constructor(private route: ActivatedRoute, private store: Store) {
 
 
     }
 
     ngOnInit() {
-
-        setRxJsLoggingLevel(RxJsLoggingLevel.DEBUG);
-
-        this.courseId = this.route.snapshot.params['id'];
-
-        this.course$ = createHttpObservable(`/api/courses/${this.courseId}`)
+        this.courseId = parseInt(this.route.snapshot.params['id'], 10);
+        this.course$ = this.store.selectCountryById(this.courseId)
           .pipe(
-            debug(RxJsLoggingLevel.INFO, 'course value '),
+            first(), // emite o primeiro valor retornado e finaliza a execução
+            // take(2) // emite os n primeiros valores retornados e finaliza a execução
           );
+
+        forkJoin(this.course$, this.loadLessons()) // Espera dois ou mais observables finalizarem
+          .subscribe(result => {
+            console.log('***forkJoin result: ', result);
+          });
+
+
+        this.loadLessons() // Observable 1
+          .pipe(
+            withLatestFrom(this.course$) // Combina o ultimo valor retornado pelo Observable 2 com o do Observable 1
+            // Util quando um dos observables retorna muitos valores e demora para completar.
+          )
+          .subscribe(([lessons, course]) => {
+            console.log('lessons: ', lessons);
+            console.log('course: ', course);
+          });
     }
 
     ngAfterViewInit() {
