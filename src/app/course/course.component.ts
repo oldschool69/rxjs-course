@@ -16,6 +16,7 @@ import {
 import {merge, fromEvent, Observable, concat} from 'rxjs';
 import {Lesson} from '../model/lesson';
 import { createHttpObservable } from '../common/util';
+import { debug, RxJsLoggingLevel, setRxJsLoggingLevel } from '../common/debug';
 
 
 @Component({
@@ -38,9 +39,14 @@ export class CourseComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
 
+        setRxJsLoggingLevel(RxJsLoggingLevel.DEBUG);
+
         this.courseId = this.route.snapshot.params['id'];
 
-        this.course$ = createHttpObservable(`/api/courses/${this.courseId}`);
+        this.course$ = createHttpObservable(`/api/courses/${this.courseId}`)
+          .pipe(
+            debug(RxJsLoggingLevel.INFO, 'course value '),
+          );
     }
 
     ngAfterViewInit() {
@@ -63,10 +69,12 @@ export class CourseComponent implements OnInit, AfterViewInit {
         .pipe(
           map(event => event.target.value),
           startWith(''), // valor inicial
+          debug(RxJsLoggingLevel.DEBUG, 'search '),
           debounceTime(400), // aplica delay antes de emitir o próximo valor do Observable
           // throttleTime(400),
           distinctUntilChanged(), // elimina valores repetidos
-          switchMap(search => this.loadLessons(search)) // Aborta a execução do Observable anterior quando um novo é iniciado
+          switchMap(search => this.loadLessons(search)), // Aborta a execução do Observable anterior quando um novo é iniciado
+          debug(RxJsLoggingLevel.DEBUG, 'lessons value '),
         );
 
     }
