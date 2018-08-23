@@ -348,3 +348,8 @@ export function findLessonsForCourse(courseId:number) {
     return Object.values(LESSONS).filter(lesson => lesson.courseId == courseId);
 }
 
+export interface Student {
+  id: number;
+  name: string;
+  age:  string;
+}

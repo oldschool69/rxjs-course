@@ -1,8 +1,21 @@
 import { Component, OnInit } from '@angular/core';
-import { noop, of, Observable, OperatorFunction, interval, Subject, BehaviorSubject, AsyncSubject, ReplaySubject } from '../../../node_modules/rxjs';
+import {
+  noop,
+  Observable,
+  OperatorFunction,
+  interval,
+  Subject,
+  BehaviorSubject,
+  AsyncSubject,
+  ReplaySubject } from '../../../node_modules/rxjs';
+
 import { createHttpObservable } from '../common/util';
-import { map } from '../../../node_modules/rxjs/operators';
+import { map, flatMap, toArray, mergeMap } from '../../../node_modules/rxjs/operators';
 import { concat, merge } from '../../../node_modules/rxjs';
+import { of } from 'rxjs';
+import { Student } from '../model/student';
+import { debug, RxJsLoggingLevel, setRxJsLoggingLevel } from '../common/debug';
+import { Class } from '../model/class';
 
 
 @Component({
@@ -13,6 +26,27 @@ import { concat, merge } from '../../../node_modules/rxjs';
 export class AboutComponent implements OnInit {
 
   constructor() { }
+
+  studentsObs$: Observable<Student[]>;
+  classesObs$: Observable<Class[]>;
+
+  studentsListMath: Student[] = [
+    {id: 1, name: 'Flavio', age: '45'},
+    {id: 2, name: 'Robert', age: '12'},
+    {id: 3, name: 'Alice', age: '13'},
+  ];
+
+  studentsListGeography: Student[] = [
+    {id: 4, name: 'George', age: '10'},
+    {id: 5, name: 'Martha', age: '14'},
+    {id: 6, name: 'Buck', age: '15'},
+  ];
+
+
+  classesList: Class[] = [
+    {id: 1, description: 'Math', students: this.studentsListMath},
+    {id: 2, description: 'Geography', students: this.studentsListGeography}
+  ];
 
   ngOnInit() {
 
@@ -52,7 +86,51 @@ export class AboutComponent implements OnInit {
 
     // this.BehaviorSubjectSipleSample();
     // this.AsyncSubjectSimpleSample();
-    this.ReplaySubjectSimpleSample();
+    // this.ReplaySubjectSimpleSample();
+
+    setRxJsLoggingLevel(RxJsLoggingLevel.DEBUG);
+
+    this.studentsObs$ = of(this.studentsListMath);
+
+    this.studentsObs$
+      .pipe(
+        flatMap(students => students),
+        // debug(RxJsLoggingLevel.DEBUG, 'students: '),
+        map(student => student.name),
+        debug(RxJsLoggingLevel.DEBUG, 'student name: '),
+        toArray(),
+        debug(RxJsLoggingLevel.DEBUG, 'array of students: '),
+
+      )
+      .subscribe(data => console.log('Students: ', data));
+
+
+    this.classesObs$ = of(this.classesList);
+
+    this.classesObs$
+      .pipe(
+        flatMap(classes => {
+          // console.log('***Step 1 ', classes);
+          return classes;
+        }),
+        debug(RxJsLoggingLevel.DEBUG, '***Step 1'),
+        map((clazz) => {
+          // console.log('***Step 2 ', clazz);
+          return clazz.students;
+        }),
+        debug(RxJsLoggingLevel.DEBUG, '***Step 2'),
+        flatMap((students: Student[]) => {
+          // console.log('***Step 3 ', students);
+          return students;
+        }),
+        map(student => student.name),
+        debug(RxJsLoggingLevel.DEBUG, '***Step 3'),
+        toArray(),
+        debug(RxJsLoggingLevel.DEBUG, '***Step 4'),
+      )
+      .subscribe(data => console.log('final output: ', data));
+
+
 
 
   }
